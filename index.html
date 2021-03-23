@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoistoSYNC</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/paper-full.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Scale canvas with resize attribute to full size */
+        #myCanvas[resize] {
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-size: 12pt;
+            font-family: "Arial";
+            font-weight: 700;
+            background: white;
+            padding: 1rem;
+            border: 1px solid black;
+        }
+
+    </style>
+</head>
+
+<body>
+    <audio id="clap">
+        <source src="hihat.mp3" type="audio/mpeg">
+        <source src="hihat.ogg" type="audio/ogg">
+    </audio>
+    <canvas id="myCanvas" resize></canvas>
+    <div id="controls">
+        Select frame speed
+        <select id="sFPS">
+            <option>24</option>
+            <option>25</option>
+            <option selected>30</option>
+            <option>50</option>
+            <option>60</option>
+        </select>
+    </div>
+
+    <script>
+        let time = null;
+        let lines = [];
+        let fpsRects = [];
+        let fpsLabels = [];
+        let text;
+        let infoText;
+
+        let fps = 30;
+        let frameCounter = 0;
+        let isPlaying = false;
+        const audio = document.getElementById("clap");
+        let outFrame = 0;
+
+        paper.install(window);
+
+        function reset(what) {
+            for (let elem of what) {
+                elem.remove();
+            }
+        }
+
+        function createScene() {
+            let dx = view.size.width / 21;
+            let d = view.size.width / 2;
+            let dy = view.size.height;
+            reset(lines);
+            reset(fpsRects);
+            reset(fpsLabels);
+            lines = [];
+            fpsRects = [];
+            fpsLabels = [];
+            time = null;
+            outFrame = 0;
+            frameCounter = 0;
+
+
+            for (let x = 10; x > 0; x--) {
+                let rect = new Path.Rectangle(d - x * dx, 0, dx, dy);
+                rect.fillColor = "#3af";
+                fpsRects.push(rect);
+            }
+            for (let x = 0; x < 11; x++) {
+                rect = new Path.Rectangle(d + x * dx, 0, dx, dy);
+                rect.fillColor = "#3af";
+                fpsRects.push(rect);
+            }
+
+
+            for (let x = 0; x <= 21; x++) {
+                lines.push(new Path.Line({
+                    from: [x * dx + dx / 2, 0],
+                    to: [x * dx + dx / 2, dy],
+                    strokeColor: 'red',
+                }));
+            }
+
+            for (let x = 10; x > 0; x--) {
+                const label = new PointText([d - (x * dx) + (dx / 2), (dy / 2)]);
+                let temp = Math.round(x * 1000 / fps);
+                label.content = "" + temp;
+                label.characterStyle = {
+                    justification: "center",
+                    fontSize: 14,
+                    fillColor: "#000",
+                    font: "Arial Black",
+                    fontWeight: 900,
+                };
+
+                fpsLabels.push(label);
+            }
+
+            for (let x = 0; x < 11; x++) {
+                const label = new PointText([d + (x * dx) + (dx / 2), (dy / 2)]);
+
+                let temp = Math.round(-x * 1000 / fps);
+                label.content = "" + temp;
+                label.characterStyle = {
+                    justification: "center",
+                    fontSize: 14,
+                    fillColor: "#000",
+                    font: "Arial Black",
+                    fontWeight: 900,
+                };
+
+                fpsLabels.push(label);
+            }
+
+            text = new PointText([view.size.width / 2, (dy / 2) - 50]);
+            text.content = "loistoSYNC";
+            text.characterStyle = {
+                justification: "center",
+                fontSize: 48,
+                fillColor: "#fff",
+                strokeColor: "#000",
+                strokeWidth: 2,
+                fontWeight: 900,
+                font: "Arial"
+            };
+
+            infoText = new PointText([view.size.width / 2, (dy / 2) - 12]);
+            infoText.content = "OBS Audio Sync Offset in ms";
+            infoText.characterStyle = {
+                justification: "center",
+                fontSize: 16,
+                fillColor: "#000",
+                fontWeight: 700,
+                font: "Arial"
+            };
+
+        }
+
+        $(() => {
+            paper.setup('myCanvas');
+            createScene();
+            render();
+
+            sFPS.onchange = function () {
+                fps = this.value;
+                delay = 1000 / fps;
+                createScene();
+                render();
+            };
+
+            view.onResize = function () {
+                render();
+            }
+
+            view.onFrame = function (e) {
+                if (isPlaying == false) return;
+
+                if (time == null) {
+                    time = performance.now() - 100;
+                    frameCounter = 0;
+                }
+
+
+                if (performance.now() - time > 1000 / fps) {
+                    time = performance.now();
+                    frameCounter += 1;
+
+                    let start = Math.round(fps / 2) - 10;
+                    let end = Math.round(fps / 2) + 11;
+
+                    if (frameCounter < start) {
+                        outFrame = 0;
+                    }
+
+                    if (frameCounter < end && frameCounter > start) {
+                        outFrame += 1;
+                    }
+
+                    if (frameCounter > end) {
+                        outFrame = end;
+                    }
+
+                    if (outFrame in fpsRects) {
+                        if (outFrame < Math.floor(21 / 2)) {
+                            fpsRects[outFrame].fillColor = "#3af";
+                        } else {
+                            fpsRects[outFrame].fillColor = "#3f3";
+                        }
+
+                        if (outFrame == Math.floor(21 / 2)) {
+                            audio.play();
+                            fpsRects[outFrame].fillColor = "#d00";
+                        }
+                    }
+                    if (frameCounter >= fps) {
+                        frameCounter = -1;
+                        for (let rect of fpsRects) {
+                            rect.fillColor = "white";
+                        }
+                    }
+                }
+            }
+
+            view.onClick = function () {
+                time = null;
+                frameCounter = 0;
+                isPlaying = !isPlaying;
+            }
+        });
+
+
+
+        function render() {
+            let dx = view.size.width / 21;
+            let dy = view.size.height;
+            let x = 0;
+            for (let line of lines) {
+                line.bounds.setCenterX(dx * x);
+                line.bounds.setY(0);
+                line.bounds.size.setHeight(dy);
+                x += 1;
+            }
+            x = 0;
+            for (let label of fpsLabels) {
+                label.bounds.setCenterX(x * dx + dx / 2);
+                label.bounds.setY(dy / 2);
+                x += 1;
+            }
+
+            x = 0;
+
+            for (let rect of fpsRects) {
+                rect.bounds.setX(x * dx);
+                rect.bounds.setY(0);
+                rect.bounds.size.setWidth(dx);
+                rect.bounds.size.setHeight(dy);
+                x += 1;
+            }
+
+            text.bounds.setCenterX(view.size.width / 2);
+            text.bounds.setCenterY(dy / 2 - 50);
+            infoText.bounds.setCenterX(view.size.width / 2);
+            infoText.bounds.setCenterY(dy / 2 - 14);
+       
+
+        }
+
+    </script>
+</body>
+
+</html>
