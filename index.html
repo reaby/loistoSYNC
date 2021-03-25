@@ -38,12 +38,11 @@
             padding: 1rem;
             border: 1px solid black;
         }
-
     </style>
 </head>
 
 <body>
-    <audio id="clap">        
+    <audio id="clap">
         <source src="hihat.wav" type="audio/wav">
     </audio>
     <canvas id="myCanvas" resize></canvas>
@@ -240,6 +239,11 @@
                 time = null;
                 frameCounter = 0;
                 isPlaying = !isPlaying;
+                if (isPlaying) {
+                    for (let rect of fpsRects) {
+                        rect.fillColor = "white";
+                    }
+                }
             }
         });
 
@@ -276,7 +280,7 @@
             text.bounds.setCenterY(dy / 2 - 50);
             infoText.bounds.setCenterX(view.size.width / 2);
             infoText.bounds.setCenterY(dy / 2 - 14);
-       
+
 
         }
 
