@@ -1,7 +1,7 @@
 # loistoSYNC
 A/V Sync application for streaming
 
-![1](https://github.com/reaby/loistosync/raw/master/resources/loistosync.png)
+![1](https://github.com/reaby/loistoSYNC/raw/main/resources/loistosync.png)
 
 You'll need some external video editor to see the audio and video frame at that time.
 Idea is to match the the audio peak with the 0-point red background rectangle.
